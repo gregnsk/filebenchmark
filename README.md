@@ -12,8 +12,9 @@ DESCRIPTION
 		path:          where files get created
 		filePrefx:     beginning of the file name
 		numFiles:      how many files should be created by each thread
-		numThreads:    how many concurrent threads should create files. Every thread creates files in a separate directory
-		reportFreqSec: how often (in sec) should the creation speed be reported
+		numThreads:    how many concurrent threads should process files. 
+		               Every thread processes files in a separate directory
+		reportFreqSec: how often (in sec) should the processing speed be reported
     
 BUILD PROCEDURE
 

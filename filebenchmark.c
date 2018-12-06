@@ -107,11 +107,12 @@ int main(int argc, char **argv) {
 	if(argc != 7) {
 		printf("Wrong usage. Run %s <operation> <path> <filePrefix> <numFiles> <numThreads> <reportFreqSec>\n",argv[0]);
 		printf("   operation: c or d. c=create. d=delete\n");
-		printf("   path: where files get created\n");
+		printf("   path: where files get processed\n");
 		printf("   filePrefx: beginning of the file name\n");
-		printf("   numFiles: how many files should be created by each thread\n");
-		printf("   numThreads: how many concurrent threads should create files. Every thread creates files in a separate directory\n");
-		printf("   reportFreqSec: how often (in sec) should the creation speed be reported\n");
+		printf("   numFiles: how many files should be processed by each thread\n");
+		printf("   numThreads: how many concurrent threads should process files.\n"); 
+        printf("               Every thread creates files in a separate directory\n");
+		printf("   reportFreqSec: how often (in sec) should the processing speed be reported\n");
 		printf("\n\n");
 		printf("Usage example: %s c /tmp/testfolder file_ 10000 3 5\n", argv[0]);
 		printf("   This command will create directories t_0, t_1, t_2 in /tmp/testfolder.\n");
