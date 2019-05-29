@@ -27,6 +27,8 @@ typedef struct {
 	char task_path[255];
 	char task_prefix[20];
 	int task_operation;
+    long task_blkSizeBytes;
+    long task_fileSizeBlks;
 } testThreadParams_struct;
 
 long getmSecSinceEpoch() {
@@ -49,15 +51,18 @@ long getmSecSinceEpoch() {
 
 void *testThread(void *vargp) {
 	long ms,secLast,secCurrent;
-	int i, iLast;
+	int i, k, iLast;
 	char fname[512];
+    char *block;
 	testThreadParams_struct *testThreadParams = vargp;
 
     if( mkdir(testThreadParams->task_path,0777)) {
     	printf("PID: %d. TID: %d. Failed to create directory %s, maybe it is already there...\n",
     		mypid,testThreadParams->task_id,testThreadParams->task_path);
     }
-
+    if(testThreadParams->task_blkSizeBytes > 0) {
+        block = (char *)malloc(testThreadParams->task_blkSizeBytes);
+    }
     ms = getmSecSinceEpoch();
 
     printf("PID: %d. TID: %d. Processing %d files in %s. Started at %jd milliseconds since the Epoch\n",
@@ -81,6 +86,12 @@ void *testThread(void *vargp) {
     			free(testThreadParams);
     			return NULL;
     		}
+            //write data if file size > 0
+            if((testThreadParams->task_blkSizeBytes > 0) && (testThreadParams->task_fileSizeBlks > 0)) {
+                for(k=0; k<testThreadParams->task_fileSizeBlks; k++) {
+                    fwrite(block, testThreadParams->task_blkSizeBytes, 1, fp);
+                }
+            }
     		fclose(fp);
     	} else if(testThreadParams->task_operation == DELETE) {
     		if(remove(fname) !=0) {
@@ -90,6 +101,9 @@ void *testThread(void *vargp) {
     }
 
     printf("PID: %d. TID: %d. Processed %d files in %ld milliseconds\n",mypid,testThreadParams->task_id,i,getmSecSinceEpoch()-ms);
+    if(testThreadParams->task_blkSizeBytes > 0) {
+        free(block);
+    }
 
     free(testThreadParams);
 	return NULL;
@@ -99,13 +113,13 @@ int main(int argc, char **argv) {
 
 	pthread_t thread_id[MAX_TEST_THREADS];
 	int threadNum,fileNum,i;
-	long reportFreqSec;
+	long reportFreqSec,fileSizeBlks,blkSizeBytes;
 	char path[255],prefix[20];
 	int operation;
 
 	printf("Testing files creation and deletion by gtouretsky@infinidat.com 2018.12.05\n");
-	if(argc != 7) {
-		printf("Wrong usage. Run %s <operation> <path> <filePrefix> <numFiles> <numThreads> <reportFreqSec>\n",argv[0]);
+	if(argc != 9) {
+		printf("Wrong usage. Run %s <operation> <path> <filePrefix> <numFiles> <numThreads> <reportFreqSec> <blkSizeBytes> <fileSizeBlks>\n",argv[0]);
 		printf("   operation: c or d. c=create. d=delete\n");
 		printf("   path: where files get processed\n");
 		printf("   filePrefx: beginning of the file name\n");
@@ -113,11 +127,14 @@ int main(int argc, char **argv) {
 		printf("   numThreads: how many concurrent threads should process files.\n"); 
         printf("               Every thread creates files in a separate directory\n");
 		printf("   reportFreqSec: how often (in sec) should the processing speed be reported\n");
+        printf("   blkSizeBytes: block size in bytes for new files\n");
+        printf("   fileSizeBlks: file size in blocks\n");
 		printf("\n\n");
-		printf("Usage example: %s c /tmp/testfolder file_ 10000 3 5\n", argv[0]);
+		printf("Usage example: %s c /tmp/testfolder file_ 10000 3 5 0 0\n", argv[0]);
 		printf("   This command will create directories t_0, t_1, t_2 in /tmp/testfolder.\n");
 		printf("   It will launch 3 threads, each creating 10000 files in one of these directories.\n");
 		printf("   Every thread will report how many files it has created every 5 seconds.\n");
+        printf("   Every file will have 0 bytes size.\n");
 		return(-1);
 	}
 
@@ -135,6 +152,8 @@ int main(int argc, char **argv) {
     fileNum=atoi(argv[4]);
     threadNum = atoi(argv[5]);
     reportFreqSec=atoi(argv[6]);
+    blkSizeBytes = atoi(argv[7]);
+    fileSizeBlks = atoi(argv[8]);
 
     if(threadNum > MAX_TEST_THREADS) {
     	printf("Too many threads specified, can not exceed %d\n",MAX_TEST_THREADS);
@@ -169,6 +188,8 @@ int main(int argc, char **argv) {
 		args->task_fileNum = fileNum;
 		args->task_reportFreqSec = reportFreqSec;
 		args->task_operation = operation;
+        args->task_blkSizeBytes = blkSizeBytes;
+        args->task_fileSizeBlks = fileSizeBlks;
 		if(pthread_create(&thread_id[i], NULL, testThread, args)) {
 			free(args);
 			perror("Failed to launch thread");
